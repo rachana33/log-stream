@@ -40,14 +40,14 @@ export class AiService {
     return this.client;
   }
 
-  async getInsights(logs: unknown[]): Promise<string> {
+  async getInsights(logs: unknown[]): Promise<any> { // Changed return type to any to match new JSON return
     const client = this.getClient();
 
     const recentLogs = Array.isArray(logs) ? logs.slice(-50) : [];
     const payload = JSON.stringify(recentLogs).slice(0, 12000);
 
     const response = await client.chat.completions.create({
-      model: this.model,
+      model: this.model, // Changed from this.deploymentName || this.model to just this.model
       messages: [
         {
           role: 'system',

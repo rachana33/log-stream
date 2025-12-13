@@ -5,14 +5,17 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 import {
     BarChart,
     Bar,
+    LineChart,
+    Line,
     XAxis,
     YAxis,
     Tooltip,
     ResponsiveContainer,
     CartesianGrid,
-    Cell
+    Cell,
+    ReferenceLine
 } from 'recharts';
-import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Calendar, Search, ShieldAlert, CheckCircle } from 'lucide-react';
+import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Calendar, Search, ShieldAlert, CheckCircle, TrendingUp, Network } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -57,6 +60,9 @@ export default function Dashboard() {
     const [aiData, setAiData] = useState<AiInsight | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [connected, setConnected] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [forecastData, setForecastData] = useState<{ time: string, count: number, isForecast: boolean }[]>([]);
 
     // UI States
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
@@ -155,6 +161,32 @@ export default function Dashboard() {
         document.body.removeChild(link);
     };
 
+    // AI Natural Language Search
+    const handleAiSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+
+        setIsSearching(true);
+        try {
+            const res = await fetch(`${API_URL}/ai/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: searchQuery })
+            });
+            const filters = await res.json();
+
+            if (filters.severity) setFilterSeverity(filters.severity);
+            if (filters.source) setFilterSource(filters.source);
+            if (filters.traceId) setFilterTraceId(filters.traceId);
+            // reset if empty
+            if (Object.keys(filters).length === 0) alert('AI could not understand the query.');
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
     const styles = useMemo(() => {
         const uniqueSources = Array.from(new Set(logs.map(l => l.source)));
         return uniqueSources;
@@ -173,6 +205,44 @@ export default function Dashboard() {
     const chartData = useMemo(() => {
         return stats.map(s => ({ ...s, fill: COLORS[s.severity] }));
     }, [stats]);
+
+    // Trace Waterfall Logic
+    const traceLogs = useMemo(() => {
+        if (!filterTraceId) return null;
+        const related = logs.filter(l => l.metadata?.traceId === filterTraceId).sort((a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        if (related.length === 0) return null;
+
+        const startTime = new Date(related[0].createdAt).getTime();
+        return related.map(l => ({
+            ...l,
+            relativeStart: new Date(l.createdAt).getTime() - startTime,
+            duration: l.metadata?.latency || 10 // fallbacks
+        }));
+    }, [logs, filterTraceId]);
+
+    // Forecasting Logic (Simple simulation)
+    useEffect(() => {
+        if (stats.length === 0) return;
+        const currentTotal = stats.reduce((acc, s) => acc + s.count, 0);
+
+        // Mock historical + forecast data
+        const data = [];
+        const now = Date.now();
+        for (let i = 10; i > 0; i--) {
+            data.push({ time: new Date(now - i * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), count: Math.max(0, currentTotal + (Math.random() * 20 - 10)), isForecast: false });
+        }
+        // Current
+        data.push({ time: 'Now', count: currentTotal, isForecast: false });
+        // Forecast
+        let lastinfo = currentTotal;
+        for (let i = 1; i <= 5; i++) {
+            lastinfo += (Math.random() * 30 - 10); // Random walk
+            data.push({ time: `+${i}m`, count: Math.max(0, Math.floor(lastinfo)), isForecast: true });
+        }
+        setForecastData(data);
+    }, [stats, logs]); // Recalculate when logs update
 
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
@@ -201,6 +271,72 @@ export default function Dashboard() {
                 </div>
             </header>
 
+            {/* AI Search Bar */}
+            <div className="mb-8 max-w-2xl mx-auto">
+                <form onSubmit={handleAiSearch} className="relative group z-10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
+                    <div className="relative flex items-center bg-slate-900 border border-slate-700/50 rounded-xl p-1 shadow-2xl">
+                        <Search className="ml-3 text-slate-500 w-5 h-5" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Ask logs... 'Show me payment errors' or 'Find trace 82x...'"
+                            className="w-full bg-transparent border-none focus:ring-0 text-slate-200 placeholder-slate-500 h-10 px-3"
+                        />
+                        <button
+                            type="submit"
+                            disabled={isSearching}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                        >
+                            {isSearching ? 'Thinking...' : 'Ask AI'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Trace Waterfall View (Conditional) */}
+            {traceLogs && (
+                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)] animate-in fade-in slide-in-from-top-4">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-semibold flex items-center gap-2 text-indigo-300">
+                            <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800">{filterTraceId}</span>
+                        </h3>
+                        <button onClick={() => setFilterTraceId('')} className="text-sm text-slate-400 hover:text-white">Close View</button>
+                    </div>
+                    <div className="space-y-3 relative">
+                        {/* Time Grid Lines (Simplified) */}
+                        <div className="absolute inset-0 flex justify-between px-32 pointer-events-none opacity-10">
+                            <div className="border-l border-white h-full"></div>
+                            <div className="border-l border-white h-full"></div>
+                            <div className="border-l border-white h-full"></div>
+                        </div>
+
+                        {traceLogs.map((step, i) => (
+                            <div key={i} className="flex items-center group">
+                                <div className="w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
+                                <div className="flex-1 h-8 bg-slate-950/50 rounded flex items-center relative overflow-hidden">
+                                    <div
+                                        className={clsx(
+                                            "h-5 rounded-md relative shadow-lg transition-all duration-500 group-hover:brightness-110",
+                                            step.severity === 'error' ? "bg-red-500/80" : "bg-indigo-500/60"
+                                        )}
+                                        style={{
+                                            marginLeft: `${Math.min(step.relativeStart / 10, 80)}%`, // Scale factor
+                                            width: `${Math.max(step.duration / 5, 20)}px`,
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        <span className="absolute -right-12 top-0.5 text-[10px] text-slate-500 font-mono pl-2">{step.duration}ms</span>
+                                    </div>
+                                </div>
+                                <div className="w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8">
 
                 {/* 1. Bar Chart (Severity) */}
@@ -228,8 +364,27 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* 1.5 Forecast Chart (New) */}
+                <div className="xl:col-span-1 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[400px]">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-400" /> AI Traffic Forecast
+                    </h3>
+                    <div className="flex-1 w-full -ml-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={forecastData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={1} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 3, fill: '#6366f1' }} />
+                                {/* Overlay dashed line if needed or custom rendering for forecast part */}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
                 {/* 2. Service Map / AI Insights */}
-                <div className="xl:col-span-3 flex flex-col gap-6">
+                <div className="xl:col-span-2 flex flex-col gap-6">
                     {/* Control Panel */}
                     <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/60 rounded-xl p-4">
                         <div className="flex items-center gap-2 text-slate-200 font-semibold">
@@ -244,7 +399,7 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                         {aiData?.services ? (
                             aiData.services.map((svc, i) => (
                                 <div key={i} className={clsx(
