@@ -37,23 +37,23 @@ LogStream is an enterprise-grade log aggregation and analysis system designed fo
 
 ### Intelligent Dashboard
 Interactive dashboard featuring real-time log streaming, AI-powered hazard detection, and service health monitoring.
-![Dashboard](./.screenshots/dashboard%20with%20ai%20analysis.png)
+![Dashboard](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/dashboard%20with%20ai%20analysis.png)
 
 ### Distributed Tracing
 Detailed waterfall visualization allows for deep-dive latency analysis across distributed microservices.
-![Trace Waterfall](./.screenshots/trace%20waterfall.png)
+![Trace Waterfall](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/trace%20waterfall.png)
 
 ### Volume & Trend Analysis
 Track log volume trends over time with granular severity breakdowns to instantly spot anomalies.
-![Trend Analysis](./.screenshots/logstream,volume%20and%20trend%20analyzer.png)
+![Trend Analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream,volume%20and%20trend%20analyzer.png)
 
 ### Smart Filtering
 Advanced filtering capabilities enable precise log isolation by service, severity, and trace ID.
-![Filtering](./.screenshots/logstream%20with%20filter.png)
+![Filtering](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream%20with%20filter.png)
 
 ### AI-Driven Insights
 Watch the system analyze logs to automatically detect root causes and generate summary reports.
-![AI Analysis](./.screenshots/ai%20thinking.gif)
+![AI Analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/ai%20thinking.gif)
 
 ## Architecture
 
