@@ -3,14 +3,18 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import {
-    PieChart,
-    Pie,
-    Cell,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
     Tooltip,
     ResponsiveContainer,
-    Legend
+    CartesianGrid,
+    Cell
 } from 'recharts';
-import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Calendar, Search, ShieldAlert, CheckCircle } from 'lucide-react';
+import clsx from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
@@ -19,32 +23,46 @@ interface Log {
     source: string;
     message: string;
     severity: string;
-    metadata: any;
+    metadata: { traceId?: string;[key: string]: any };
     createdAt: string;
+    [key: string]: any;
 }
 
 interface SeverityStat {
     severity: string;
     count: number;
-    [key: string]: any;
+}
+
+interface AiInsight {
+    summary: string;
+    services: {
+        name: string;
+        status: 'Critical' | 'Warning' | 'Healthy';
+        issues: string[];
+        riskScore: number;
+    }[];
 }
 
 const COLORS: Record<string, string> = {
-    error: '#ef4444', // Red-500
-    warn: '#f59e0b',  // Amber-500
-    info: '#3b82f6',  // Blue-500
-    debug: '#10b981', // Emerald-500
+    error: '#f87171', // Red-400
+    warn: '#fbbf24',  // Amber-400
+    info: '#60a5fa',  // Blue-400
+    debug: '#34d399', // Emerald-400
 };
 
 export default function Dashboard() {
+    // Data States
     const [logs, setLogs] = useState<Log[]>([]);
     const [stats, setStats] = useState<SeverityStat[]>([]);
-    const [insights, setInsights] = useState<string | null>(null);
+    const [aiData, setAiData] = useState<AiInsight | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [connected, setConnected] = useState(false);
 
     // UI States
-    const [filterSeverity, setFilterSeverity] = useState<string>('all'); // 'all' | 'error' | 'warn' | 'info'
+    const [filterSeverity, setFilterSeverity] = useState<string>('all');
+    const [filterSource, setFilterSource] = useState<string>('all');
+    const [filterTraceId, setFilterTraceId] = useState<string>('');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     const fetchInitialData = async () => {
@@ -62,14 +80,10 @@ export default function Dashboard() {
     useEffect(() => {
         fetchInitialData();
 
-        // SignalR Connection
         const connectSignalR = async () => {
             try {
                 const negRes = await fetch(`${API_URL}/realtime/negotiate`, { method: 'POST' });
-                if (!negRes.ok) {
-                    console.warn("SignalR negotiation failed, using polling fallback or offline mode");
-                    return;
-                }
+                if (!negRes.ok) return;
                 const { url, accessToken } = await negRes.json();
 
                 const connection = new HubConnectionBuilder()
@@ -78,9 +92,7 @@ export default function Dashboard() {
                     .build();
 
                 connection.on('newLog', (log: Log) => {
-                    setLogs((prev) => [log, ...prev].slice(0, 200)); // Keep last 200 in memory
-
-                    // Update stats locally for immediate feedback
+                    setLogs((prev) => [log, ...prev].slice(0, 500)); // Increased buffer
                     setStats((prev) => {
                         const existing = prev.find(s => s.severity === log.severity);
                         if (existing) {
@@ -92,9 +104,8 @@ export default function Dashboard() {
 
                 await connection.start();
                 setConnected(true);
-                console.log('SignalR Connected');
             } catch (err) {
-                console.error('SignalR Connection Failed:', err);
+                console.error('SignalR Connection Failed', err);
             }
         };
 
@@ -104,186 +115,286 @@ export default function Dashboard() {
     const generateInsights = async () => {
         setLoadingInsights(true);
         try {
-            // Send only recent logs to avoid payload limits
             const payload = { logs: logs.slice(0, 50) };
-
             const res = await fetch(`${API_URL}/ai/insights`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
-            setInsights(data.insights || data.message || 'No insights returned');
+
+            // Try parsing JSON if AI returned a stringified JSON block
+            let parsed = data.insights;
+            if (typeof data.insights === 'string') {
+                try {
+                    parsed = JSON.parse(data.insights.replace(/```json/g, '').replace(/```/g, '').trim());
+                } catch (e) {
+                    // Fallback if not valid JSON
+                    console.warn('AI response was not valid JSON', e);
+                    parsed = null;
+                }
+            }
+            setAiData(parsed);
+
         } catch (err) {
-            setInsights('Failed to generate insights. Backend may be unreachable.');
-            console.error(err);
+            console.error('AI Insight Error', err);
         } finally {
             setLoadingInsights(false);
         }
     };
 
+    const downloadLogs = () => {
+        const jsonString = JSON.stringify(logs, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = `logs-${new Date().toISOString()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const styles = useMemo(() => {
+        const uniqueSources = Array.from(new Set(logs.map(l => l.source)));
+        return uniqueSources;
+    }, [logs]);
+
     const filteredLogs = useMemo(() => {
-        if (filterSeverity === 'all') return logs;
-        return logs.filter(l => l.severity === filterSeverity);
-    }, [logs, filterSeverity]);
+        return logs.filter(l => {
+            if (filterSeverity !== 'all' && l.severity !== filterSeverity) return false;
+            if (filterSource !== 'all' && l.source !== filterSource) return false;
+            if (filterTraceId && !l.metadata?.traceId?.includes(filterTraceId)) return false;
+            return true;
+        });
+    }, [logs, filterSeverity, filterSource, filterTraceId]);
+
+    // Derived stats for charts
+    const chartData = useMemo(() => {
+        return stats.map(s => ({ ...s, fill: COLORS[s.severity] }));
+    }, [stats]);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
+        <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
             {/* Header */}
-            <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <header className="mb-8 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-3">
-                        <Activity className="text-cyan-400 w-8 h-8" /> LogStream AI
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-3 tracking-tight">
+                        <Activity className="text-blue-400 w-8 h-8" /> LogStream
+                        <span className="text-sm font-mono text-slate-500 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-800/50">v2.0</span>
                     </h1>
-                    <p className="text-slate-400 text-sm mt-1 ml-11">Real-time Anomaly Detection & Insights</p>
+                    <p className="text-slate-400 text-sm mt-2 ml-11 max-w-md leading-relaxed">
+                        Enterprise-grade distributed log analysis with AI-powered hazard detection.
+                    </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border ${connected ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}>
-                        <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                        {connected ? 'LIVE STREAM' : 'OFFLINE'}
+
+                <div className="flex flex-wrap items-center gap-4">
+                    <button onClick={downloadLogs} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-400 rounded-lg text-sm transition-all border border-slate-700/50">
+                        <Download className="w-4 h-4" /> Export Logs
+                    </button>
+                    <div className="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-800/80 backdrop-blur-sm">
+                        <div className={clsx("w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-500", connected ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-500 shadow-rose-500/50")} />
+                        <span className="text-xs font-semibold tracking-wide text-slate-300">
+                            {connected ? 'SYSTEM ONLINE' : 'DISCONNECTED'}
+                        </span>
                     </div>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8">
 
-                {/* 1. Enhanced Visuals (Donut Chart) */}
-                <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col">
-                    <h3 className="text-lg font-semibold mb-6 text-slate-200 flex items-center gap-2">
-                        <PieChart className="w-5 h-5 text-indigo-400" />
-                        Log Severity
+                {/* 1. Bar Chart (Severity) */}
+                <div className="xl:col-span-1 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[400px]">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-indigo-400" /> Log Volume
                     </h3>
-                    <div className="flex-1 w-full min-h-[300px]">
+                    <div className="flex-1 w-full -ml-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={stats}
-                                    dataKey="count"
-                                    nameKey="severity"
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={100}
-                                    paddingAngle={2}
-                                    stroke="none"
-                                >
-                                    {stats.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[entry.severity] || '#94a3b8'} className="stroke-transparent outline-none" />
-                                    ))}
-                                </Pie>
+                            <BarChart data={chartData} barSize={40}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                <XAxis dataKey="severity" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} tickFormatter={(val) => val.toUpperCase()} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                 <Tooltip
+                                    cursor={{ fill: '#1e293b', opacity: 0.4 }}
                                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f1f5f9' }}
-                                    itemStyle={{ color: '#e2e8f0' }}
                                 />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
+                                <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* 2. AI Insights Panel */}
-                <div className="lg:col-span-2 flex flex-col">
-                    <div className="flex-1 bg-gradient-to-br from-slate-900 to-indigo-950/20 border border-indigo-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <Zap size={150} />
+                {/* 2. Service Map / AI Insights */}
+                <div className="xl:col-span-3 flex flex-col gap-6">
+                    {/* Control Panel */}
+                    <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/60 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                            <Zap className="w-5 h-5 text-yellow-400" />
+                            <span>AI Hazard Detection</span>
                         </div>
+                        <button
+                            onClick={generateInsights}
+                            disabled={loadingInsights}
+                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all shadow-[0_0_20px_rgba(79,70,229,0.2)] flex items-center gap-2 disabled:opacity-50">
+                            {loadingInsights ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Run Analysis'}
+                        </button>
+                    </div>
 
-                        <div className="flex justify-between items-start mb-6 z-10 relative">
-                            <h3 className="text-xl font-semibold text-indigo-200 flex items-center gap-2">
-                                <Zap className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-                                AI Anomaly Analysis
-                            </h3>
-                            <button
-                                onClick={generateInsights}
-                                disabled={loadingInsights}
-                                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 rounded-xl text-sm font-semibold text-white transition-all shadow-lg hover:shadow-indigo-500/25 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {loadingInsights ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Scan Logs'}
-                            </button>
-                        </div>
-
-                        <div className="prose prose-invert prose-sm max-w-none relative z-10">
-                            {insights ? (
-                                <div className="bg-black/20 backdrop-blur-sm p-5 rounded-xl border border-indigo-500/20 whitespace-pre-line text-slate-200 leading-relaxed shadow-inner">
-                                    {insights}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+                        {aiData?.services ? (
+                            aiData.services.map((svc, i) => (
+                                <div key={i} className={clsx(
+                                    "p-5 rounded-xl border flex flex-col gap-3 transition-all hover:scale-[1.02]",
+                                    svc.status === 'Critical' ? "bg-red-500/5 border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]" :
+                                        svc.status === 'Warning' ? "bg-amber-500/5 border-amber-500/20" :
+                                            "bg-emerald-500/5 border-emerald-500/20"
+                                )}>
+                                    <div className="flex justify-between items-start">
+                                        <h4 className="font-bold text-lg">{svc.name}</h4>
+                                        <span className={clsx(
+                                            "px-2 py-1 rounded text-xs font-bold uppercase",
+                                            svc.status === 'Critical' ? "bg-red-500/20 text-red-400" :
+                                                svc.status === 'Warning' ? "bg-amber-500/20 text-amber-400" :
+                                                    "bg-emerald-500/20 text-emerald-400"
+                                        )}>{svc.status}</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <ul className="list-disc list-inside space-y-1">
+                                            {svc.issues.map((iss, idx) => (
+                                                <li key={idx} className="text-xs text-slate-400 leading-relaxed">{iss}</li>
+                                            ))}
+                                            {svc.issues.length === 0 && <li className="text-xs text-slate-500 italic">No detected issues.</li>}
+                                        </ul>
+                                    </div>
+                                    <div className="mt-2 pt-3 border-t border-white/5 flex justify-between items-center">
+                                        <span className="text-xs text-slate-500 uppercase font-medium">Risk Score</span>
+                                        <div className="flex gap-1">
+                                            {[...Array(10)].map((_, n) => (
+                                                <div key={n} className={clsx("w-1 h-3 rounded-full", n < svc.riskScore ? (svc.status === 'Critical' ? "bg-red-500" : "bg-amber-500") : "bg-slate-800")} />
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-800 rounded-xl text-slate-500 bg-slate-900/30">
-                                    <Zap className="w-8 h-8 mb-2 opacity-50" />
-                                    <p>Tap "Scan Logs" to detect pattern anomalies via Azure OpenAI.</p>
-                                </div>
-                            )}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="col-span-full h-48 bg-slate-900/20 border border-slate-800/50 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-3 border-dashed">
+                                <Search className="w-8 h-8 opacity-20" />
+                                <p className="text-sm">No analysis generated yet. Click "Run Analysis" to scan services.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* 3. Filterable Log Stream */}
-            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[700px]">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                        <Terminal className="w-5 h-5 text-emerald-400" /> Live Stream
-                    </h3>
+            {/* 3. Advanced Filtering & Feed */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[800px]">
+                {/* Filter Toolbar */}
+                <div className="p-4 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur z-20 flex flex-col lg:flex-row gap-4 justify-between items-center">
+                    <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                        <Terminal className="w-5 h-5 text-indigo-400" />
+                        <span>Log Stream</span>
+                        <span className="text-xs text-slate-500 font-normal bg-slate-800/50 px-2 py-0.5 rounded ml-2">{filteredLogs.length} events</span>
+                    </div>
 
-                    {/* Filter Controls */}
-                    <div className="flex bg-slate-950/50 rounded-lg p-1 border border-slate-800">
-                        {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
-                            const isActive = filterSeverity === sev;
-                            let activeClass = 'bg-slate-700 text-slate-200';
-                            if (isActive && sev === 'error') activeClass = 'bg-red-500/20 text-red-400 border border-red-500/20 text-red-100';
-                            if (isActive && sev === 'warn') activeClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/20 text-amber-100';
-                            if (isActive && sev === 'info') activeClass = 'bg-blue-500/20 text-blue-400 border border-blue-500/20 text-blue-100';
-                            if (isActive && sev === 'all') activeClass = 'bg-slate-700 text-white';
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div className="relative group">
+                            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500 group-focus-within:text-slate-300 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Filter Trace ID..."
+                                value={filterTraceId}
+                                onChange={(e) => setFilterTraceId(e.target.value)}
+                                className="pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 w-full lg:w-48 placeholder:text-slate-600"
+                            />
+                        </div>
 
-                            return (
-                                <button
-                                    key={sev}
-                                    onClick={() => setFilterSeverity(sev)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${isActive ? activeClass : 'text-slate-500 hover:text-slate-300'}`}
-                                >
-                                    {sev}
-                                </button>
-                            );
-                        })}
+                        <select
+                            value={filterSource}
+                            onChange={(e) => setFilterSource(e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
+                        >
+                            <option value="all">All Services</option>
+                            {styles.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+
+                        <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
+                            {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
+                                const isActive = filterSeverity === sev;
+                                return (
+                                    <button
+                                        key={sev}
+                                        onClick={() => setFilterSeverity(sev)}
+                                        className={clsx(
+                                            "px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all",
+                                            isActive && sev === 'error' && "bg-red-500/20 text-red-300 border border-red-500/20",
+                                            isActive && sev === 'warn' && "bg-amber-500/20 text-amber-300 border border-amber-500/20",
+                                            isActive && sev === 'info' && "bg-blue-500/20 text-blue-300 border border-blue-500/20",
+                                            isActive && sev === 'all' && "bg-slate-700 text-white",
+                                            !isActive && "text-slate-500 hover:text-slate-300"
+                                        )}
+                                    >
+                                        {sev}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Scrollable Container */}
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border border-slate-800 rounded-xl bg-slate-950/30">
+                {/* Log Table */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/20">
                     <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10 shadow-sm">
-                            <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
-                                <th className="p-4 w-32">Time</th>
-                                <th className="p-4 w-24">Severity</th>
-                                <th className="p-4 w-48">Source</th>
+                        <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10 shadow-lg border-b border-slate-800/60">
+                            <tr className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                                <th className="p-4 w-32">Timestamp</th>
+                                <th className="p-4 w-28">Severity</th>
+                                <th className="p-4 w-48">Service</th>
+                                <th className="p-4 w-40">Trace ID</th>
                                 <th className="p-4">Message</th>
                             </tr>
                         </thead>
-                        <tbody className="text-sm font-mono divide-y divide-slate-800/50">
+                        <tbody className="text-sm font-mono divide-y divide-slate-800/30">
                             {filteredLogs.map((log, i) => (
-                                <tr key={log.id || i} className="hover:bg-slate-800/20 transition-colors group">
-                                    <td className="p-4 text-slate-400 whitespace-nowrap text-xs">
+                                <tr key={log.id || i} className="hover:bg-slate-800/30 transition-colors group">
+                                    <td className="p-4 text-slate-500 whitespace-nowrap text-xs">
                                         {new Date(log.createdAt || Date.now()).toLocaleTimeString()}
                                     </td>
                                     <td className="p-4">
-                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${log.severity === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                                log.severity === 'warn' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                    'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                            }`}>
-                                            {log.severity === 'error' && <AlertTriangle className="w-3 h-3" />}
-                                            {log.severity === 'warn' && <AlertTriangle className="w-3 h-3" />}
-                                            {log.severity === 'info' && <Info className="w-3 h-3" />}
-                                            {log.severity.toUpperCase()}
+                                        <div className={clsx(
+                                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide shadow-sm w-fit",
+                                            log.severity === 'error' && "bg-red-500/10 text-red-400 border-red-500/20",
+                                            log.severity === 'warn' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                                            (log.severity === 'info' || log.severity === 'debug') && "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                                        )}>
+                                            {log.severity}
                                         </div>
                                     </td>
-                                    <td className="p-4 text-cyan-200/80">{log.source}</td>
-                                    <td className="p-4 text-slate-300 group-hover:text-white transition-colors">{log.message}</td>
+                                    <td className="p-4">
+                                        <span className="text-slate-300 bg-slate-800/40 px-2 py-1 rounded border border-white/5">{log.source}</span>
+                                    </td>
+                                    <td className="p-4">
+                                        <button
+                                            onClick={() => setFilterTraceId(log.metadata?.traceId || '')}
+                                            className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer font-mono"
+                                            title="Filter by Trace ID"
+                                        >
+                                            {log.metadata?.traceId ? log.metadata.traceId.substring(0, 8) + '...' : '-'}
+                                        </button>
+                                    </td>
+                                    <td className="p-4 text-slate-400 group-hover:text-slate-200 transition-colors">
+                                        {log.message}
+                                    </td>
                                 </tr>
                             ))}
                             {filteredLogs.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-12 text-center text-slate-500 flex flex-col items-center justify-center">
-                                        <Filter className="w-8 h-8 mb-2 opacity-20" />
-                                        {logs.length === 0 ? 'Waiting for logs...' : 'No logs match this filter.'}
+                                    <td colSpan={5} className="p-24 text-center text-slate-600 flex flex-col items-center justify-center">
+                                        <Filter className="w-10 h-10 mb-3 opacity-20" />
+                                        <p>No logs match the current filters.</p>
                                     </td>
                                 </tr>
                             )}
@@ -295,17 +406,18 @@ export default function Dashboard() {
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {
-                    width: 8px;
+                    width: 10px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-track {
-                    background: #1e293b;
+                    background: #0f172a;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #475569;
-                    border-radius: 4px;
+                    background: #334155;
+                    border-radius: 5px;
+                    border: 2px solid #0f172a;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #64748b;
+                    background: #475569;
                 }
             `}</style>
         </div>

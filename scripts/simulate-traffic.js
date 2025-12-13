@@ -15,12 +15,13 @@ async function sendLog() {
 
     const validMessages = MESSAGES[severity];
     const message = validMessages[Math.floor(Math.random() * validMessages.length)];
+    const traceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     const log = {
         source: service,
         message: message,
         severity,
-        metadata: { latency: Math.floor(Math.random() * 500) },
+        metadata: { latency: Math.floor(Math.random() * 500), traceId },
         timestamp: new Date().toISOString()
     };
 

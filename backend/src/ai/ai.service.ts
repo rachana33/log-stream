@@ -52,11 +52,11 @@ export class AiService {
         {
           role: 'system',
           content:
-            'You are an SRE assistant. Summarize issues and anomalies in plain English for a non-technical audience. Be concise. Output 3-6 bullet points and a short recommended next action.',
+            'You are a Senior SRE Assistant. Analyze the provided logs to identify root causes and hazardous trends. Group your findings by Service Name. Output a JSON object with this structure: { "summary": "brief high-level summary", "services": [{ "name": "service-name", "status": "Critical/Warning/Healthy", "issues": ["list of key issues"], "riskScore": 1-10 }] }. Do NOT output markdown code blocks, just the raw JSON.',
         },
         {
           role: 'user',
-          content: `Analyze these recent logs (JSON). Focus on spikes, repeated errors, and likely causes.\n\n${payload}`,
+          content: `Analyze these recent logs. Identify which services are emitting errors or high latency.\n\n${payload}`,
         },
       ],
 
