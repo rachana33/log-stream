@@ -303,7 +303,7 @@ export default function Dashboard() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Ask...'Show me payment errors'"
-                                className="w-full bg-transparent border-none focus:ring-0 text-slate-200 placeholder-slate-500 h-10 px-3 text-sm"
+                                className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-slate-200 placeholder-slate-500 h-10 px-3 text-sm"
                             />
                         </div>
                         <button
