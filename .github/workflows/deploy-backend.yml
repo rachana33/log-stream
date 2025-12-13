@@ -1,0 +1,44 @@
+name: Deploy Backend to Azure
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+env:
+  ACR_NAME: logstreamacr1765615220
+  CONTAINER_APP_NAME: logstream-backend
+  RESOURCE_GROUP: LogStream-RG
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push container image
+        run: |
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/logstream-backend:${{ github.sha }} ./backend
+          docker push ${{ env.ACR_NAME }}.azurecr.io/logstream-backend:${{ github.sha }}
+
+      - name: Deploy to Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}/backend
+          acrName: ${{ env.ACR_NAME }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.ACR_NAME }}.azurecr.io/logstream-backend:${{ github.sha }}
+          targetPort: 3000
