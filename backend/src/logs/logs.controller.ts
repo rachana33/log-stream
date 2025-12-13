@@ -5,9 +5,9 @@ import { UpdateLogDto } from './dto/update-log.dto';
 
 @Controller('logs')
 export class LogsController {
-  constructor(private readonly logsService: LogsService) {}
+  constructor(private readonly logsService: LogsService) { }
 
-  @Post()
+  @Post('ingest')
   create(@Body() createLogDto: CreateLogDto) {
     return this.logsService.create(createLogDto);
   }
