@@ -57,8 +57,25 @@ function sendToBackend(log) {
 }
 
 
-setInterval(() => {
-    for (let i = 0; i < 5; i++) sendLog();
-}, 5000);
-
 console.log('Starting log simulation to ' + ENDPOINT);
+
+setInterval(() => {
+    // 30% chance to send a full trace, otherwise single random log
+    if (Math.random() < 0.3) {
+        sendTrace();
+    } else {
+        const service = SERVICES[Math.floor(Math.random() * SERVICES.length)];
+        const severity = SEVERITIES[Math.floor(Math.random() * SEVERITIES.length)];
+        const validMessages = MESSAGES[severity];
+        const message = validMessages[Math.floor(Math.random() * validMessages.length)];
+        const traceId = Math.random().toString(36).substring(2, 15);
+
+        sendToBackend({
+            source: service,
+            message: message,
+            severity,
+            metadata: { latency: Math.floor(Math.random() * 100), traceId },
+            timestamp: new Date().toISOString()
+        });
+    }
+}, 800); // Send log every 800ms
