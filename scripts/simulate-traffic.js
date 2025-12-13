@@ -78,4 +78,4 @@ setInterval(() => {
             timestamp: new Date().toISOString()
         });
     }
-}, 800); // Send log every 800ms
+}, 1500); // Send log every 1.5 seconds

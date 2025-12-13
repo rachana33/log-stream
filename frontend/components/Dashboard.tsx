@@ -59,7 +59,7 @@ export default function Dashboard() {
     const [connected, setConnected] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    const [forecastData, setForecastData] = useState<{ time: string, count: number, isForecast: boolean }[]>([]);
+    const [forecastData, setForecastData] = useState<{ time: string, count: number, errors: number, warnings: number }[]>([]);
 
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [filterSource, setFilterSource] = useState<string>('all');
@@ -211,23 +211,32 @@ export default function Dashboard() {
         }));
     }, [logs, filterTraceId]);
 
+    // Trend Analysis Logic (Stable historical view)
     useEffect(() => {
-        if (stats.length === 0) return;
-        const currentTotal = stats.reduce((acc, s) => acc + s.count, 0);
+        if (logs.length === 0) return;
 
-        const data = [];
         const now = Date.now();
-        for (let i = 10; i > 0; i--) {
-            data.push({ time: new Date(now - i * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), count: Math.max(0, currentTotal + (Math.random() * 20 - 10)), isForecast: false });
+        const timeWindows = [];
+
+        // Create 15 time buckets of 1 minute each (last 15 minutes)
+        for (let i = 14; i >= 0; i--) {
+            const windowStart = now - (i + 1) * 60000;
+            const windowEnd = now - i * 60000;
+            const windowLogs = logs.filter(log => {
+                const logTime = new Date(log.createdAt).getTime();
+                return logTime >= windowStart && logTime < windowEnd;
+            });
+
+            timeWindows.push({
+                time: new Date(windowEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                count: windowLogs.length,
+                errors: windowLogs.filter(l => l.severity === 'error').length,
+                warnings: windowLogs.filter(l => l.severity === 'warn').length,
+            });
         }
-        data.push({ time: 'Now', count: currentTotal, isForecast: false });
-        let lastinfo = currentTotal;
-        for (let i = 1; i <= 5; i++) {
-            lastinfo += (Math.random() * 30 - 10);
-            data.push({ time: `+${i}m`, count: Math.max(0, Math.floor(lastinfo)), isForecast: true });
-        }
-        setForecastData(data);
-    }, [stats, logs]);
+
+        setForecastData(timeWindows);
+    }, [logs]);
 
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
@@ -531,19 +540,21 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Forecast Chart */}
+                    {/* Trend Analyzer Chart */}
                     <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[335px]">
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-emerald-400" /> AI Traffic Forecast
+                            <TrendingUp className="w-4 h-4 text-emerald-400" /> Trend Analyzer
                         </h3>
                         <div className="flex-1 w-full -ml-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={forecastData}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={1} />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={2} />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                     <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
-                                    <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 3, fill: '#6366f1' }} />
+                                    <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 2, fill: '#6366f1' }} name="Total Logs" />
+                                    <Line type="monotone" dataKey="errors" stroke="#f87171" strokeWidth={2} dot={{ r: 2, fill: '#f87171' }} name="Errors" />
+                                    <Line type="monotone" dataKey="warnings" stroke="#fbbf24" strokeWidth={2} dot={{ r: 2, fill: '#fbbf24' }} name="Warnings" />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
