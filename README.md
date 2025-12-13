@@ -23,6 +23,7 @@ LogStream is an enterprise-grade log aggregation and analysis system designed fo
 
 ### AI-Powered Analysis
 - Natural language search: Query logs using plain English (e.g., "show me payment errors")
+- **Conversational AI Chat**: Ask questions about your logs (e.g., "Which service has the most errors?")
 - Automated hazard detection with service-level risk scoring
 - Intelligent service name mapping for user-friendly queries
 

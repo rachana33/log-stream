@@ -115,4 +115,35 @@ export class AiService {
       return {};
     }
   }
+
+  async chatWithLogs(messages: { role: 'user' | 'system' | 'assistant', content: string }[], contextLogs: any[]): Promise<string> {
+    const client = this.getClient();
+
+    // Summarize logs for context (prevent token overflow)
+    const logSummary = contextLogs.slice(0, 100).map(l =>
+      `[${l.severity.toUpperCase()}] ${l.source}: ${l.message}`
+    ).join('\n');
+
+    const systemPrompt = `You are a Log Analysis Assistant. You have access to the last 100 logs.
+    Your job is to answer the user's questions based strictly on these logs.
+    
+    Data Source:
+    ${logSummary}
+    
+    Rules:
+    - Be concise and direct.
+    - If asked "which service has maximum errors", count them in the provided logs and answer.
+    - If the answer isn't in the logs, say "I don't see that in the recent logs."
+    `;
+
+    const response = await client.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ]
+    });
+
+    return response.choices[0].message?.content || "I couldn't generate an answer.";
+  }
 }

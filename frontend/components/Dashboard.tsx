@@ -59,6 +59,8 @@ export default function Dashboard() {
     const [connected, setConnected] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+    const [isThinking, setIsThinking] = useState(false);
     const [forecastData, setForecastData] = useState<{ time: string, count: number, errors: number, warnings: number }[]>([]);
 
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
@@ -159,22 +161,49 @@ export default function Dashboard() {
         if (!searchQuery.trim()) return;
 
         setIsSearching(true);
+        setAiAnswer(null);
+
+        // 1. Kick off Filter Search (Fast)
         try {
-            const res = await fetch(`${API_URL}/ai/search`, {
+            const searchRes = await fetch(`${API_URL}/ai/search`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: searchQuery })
             });
-            const filters = await res.json();
+            const filters = await searchRes.json();
 
-            if (filters.severity) setFilterSeverity(filters.severity);
-            if (filters.source) setFilterSource(filters.source);
-            if (filters.traceId) setFilterTraceId(filters.traceId);
-            if (Object.keys(filters).length === 0) alert('AI could not understand the query.');
+            // Apply filters immediately
+            if (Object.keys(filters).length > 0) {
+                if (filters.severity) setFilterSeverity(filters.severity);
+                if (filters.source) setFilterSource(filters.source);
+                if (filters.traceId) setFilterTraceId(filters.traceId);
+            }
         } catch (err) {
             console.error(err);
-        } finally {
-            setIsSearching(false);
+        }
+        setIsSearching(false); // Release button lock immediately
+
+        // 2. Kick off Chat Search (Slower) - if it looks like a question or generic query
+        if (searchQuery.includes('who') || searchQuery.includes('which') || searchQuery.includes('what') || searchQuery.includes('?') || searchQuery.includes('count') || searchQuery.includes('many')) {
+            setIsThinking(true);
+            try {
+                const chatRes = await fetch(`${API_URL}/ai/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: searchQuery }],
+                        logs: logs.slice(0, 100)
+                    })
+                });
+                const chatData = await chatRes.json();
+                if (chatData.answer) {
+                    setAiAnswer(chatData.answer);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsThinking(false);
+            }
         }
     };
 
@@ -266,7 +295,7 @@ export default function Dashboard() {
             <div className="mb-8 max-w-2xl mx-auto">
                 <form onSubmit={handleAiSearch} className="relative group z-10">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
-                    <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-900 border border-slate-700/50 rounded-xl p-1 shadow-2xl gap-2 sm:gap-0">
+                    <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-900 border border-slate-700/50 rounded-xl p-1 shadow-2xl gap-2 sm:gap-0 transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50 focus-within:shadow-[0_0_20px_rgba(99,102,241,0.2)]">
                         <div className="flex-1 flex items-center pl-2">
                             <Search className="text-slate-500 w-5 h-5 shrink-0" />
                             <input
@@ -282,7 +311,7 @@ export default function Dashboard() {
                             disabled={isSearching}
                             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 whitespace-nowrap"
                         >
-                            {isSearching ? 'Thinking...' : 'Ask AI'}
+                            {isSearching ? 'Applying...' : 'Ask AI'}
                         </button>
                     </div>
                 </form>
@@ -307,6 +336,33 @@ export default function Dashboard() {
                         >
                             Clear All
                         </button>
+                    </div>
+                )}
+                {/* AI Chat Answer Bubble */}
+                {(aiAnswer || isThinking) && (
+                    <div className="mb-6 mx-auto max-w-2xl bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                        <div className={clsx("bg-indigo-500/20 p-2 rounded-lg shrink-0", isThinking && "animate-pulse")}>
+                            <Zap className={clsx("w-5 h-5 text-indigo-400", isThinking && "animate-spin")} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-indigo-300 mb-1">
+                                {isThinking ? 'Analyzing Logs...' : 'AI Analysis'}
+                            </h4>
+                            {isThinking ? (
+                                <div className="space-y-2 max-w-[200px]">
+                                    <div className="h-2 bg-indigo-500/20 rounded animate-pulse" />
+                                    <div className="h-2 bg-indigo-500/20 rounded animate-pulse w-2/3" />
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-300 leading-relaxed">{aiAnswer}</p>
+                            )}
+                        </div>
+                        {!isThinking && (
+                            <button onClick={() => setAiAnswer(null)} className="text-slate-500 hover:text-slate-300">
+                                <span className="sr-only">Dismiss</span>
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

@@ -15,4 +15,10 @@ export class AiController {
   async search(@Body() body: { query: string }) {
     return await this.aiService.parseQuery(body.query);
   }
+
+  @Post('chat')
+  async chat(@Body() body: { messages: any[], logs: any[] }) {
+    const answer = await this.aiService.chatWithLogs(body.messages, body.logs);
+    return { answer };
+  }
 }
