@@ -59,7 +59,7 @@ export class AiService {
           content: `Analyze these recent logs (JSON). Focus on spikes, repeated errors, and likely causes.\n\n${payload}`,
         },
       ],
-      temperature: 0.2,
+
     });
 
     return response.choices?.[0]?.message?.content?.trim() || '';
