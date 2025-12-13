@@ -430,22 +430,6 @@ Contributions are welcome. Please:
 
 MIT License - see LICENSE file for details
 
-## Support
-
-For issues and questions:
-- GitHub Issues: https://github.com/yourusername/log-stream/issues
-- Documentation: https://github.com/yourusername/log-stream/wiki
-
-## Roadmap
-
-Planned features:
-- Alert system with Slack/Teams integration
-- Custom dashboards and saved views
-- Advanced anomaly detection with ML
-- Multi-environment support
-- Service dependency topology visualization
-- Log playback and time-travel debugging
-
 ## Acknowledgments
 
 Built with:
