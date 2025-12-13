@@ -530,11 +530,12 @@ export default function Dashboard() {
                                             backgroundColor: '#1e293b',
                                             borderColor: '#475569',
                                             borderRadius: '8px',
-                                            color: '#f1f5f9',
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             fontWeight: '500'
                                         }}
+                                        labelStyle={{ color: '#ffffff', fontWeight: '600' }}
+                                        itemStyle={{ color: '#ffffff' }}
                                     />
                                     <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
                                         {chartData.map((entry, index) => (
@@ -562,11 +563,12 @@ export default function Dashboard() {
                                             backgroundColor: '#1e293b',
                                             borderColor: '#475569',
                                             borderRadius: '8px',
-                                            color: '#f1f5f9',
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             fontWeight: '500'
                                         }}
+                                        labelStyle={{ color: '#ffffff', fontWeight: '600' }}
+                                        itemStyle={{ color: '#ffffff' }}
                                     />
                                     <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 2, fill: '#6366f1' }} name="Total Logs" />
                                     <Line type="monotone" dataKey="errors" stroke="#f87171" strokeWidth={2} dot={{ r: 2, fill: '#f87171' }} name="Errors" />
