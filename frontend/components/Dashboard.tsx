@@ -239,21 +239,21 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
             {/* Header */}
-            <header className="mb-8 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+            <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-3 tracking-tight">
+                    <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-3 tracking-tight">
                         <Activity className="text-blue-400 w-8 h-8" /> LogStream
                     </h1>
-                    <p className="text-slate-400 text-sm mt-2 ml-11 max-w-md leading-relaxed">
+                    <p className="text-slate-400 text-sm mt-2 md:ml-11 max-w-md leading-relaxed">
                         Log Analysis with AI Insights
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4">
-                    <button onClick={downloadLogs} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-400 rounded-lg text-sm transition-all border border-slate-700/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <button onClick={downloadLogs} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-400 rounded-lg text-sm transition-all border border-slate-700/50">
                         <Download className="w-4 h-4" /> Export Logs
                     </button>
-                    <div className="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-800/80 backdrop-blur-sm">
+                    <div className="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-800/80 backdrop-blur-sm">
                         <div className={clsx("w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-500", connected ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-500 shadow-rose-500/50")} />
                         <span className="text-xs font-semibold tracking-wide text-slate-300">
                             {connected ? 'SYSTEM ONLINE' : 'DISCONNECTED'}
@@ -266,19 +266,21 @@ export default function Dashboard() {
             <div className="mb-8 max-w-2xl mx-auto">
                 <form onSubmit={handleAiSearch} className="relative group z-10">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
-                    <div className="relative flex items-center bg-slate-900 border border-slate-700/50 rounded-xl p-1 shadow-2xl">
-                        <Search className="ml-3 text-slate-500 w-5 h-5" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Ask logs... 'Show me payment errors' or 'Find trace 82x...'"
-                            className="w-full bg-transparent border-none focus:ring-0 text-slate-200 placeholder-slate-500 h-10 px-3"
-                        />
+                    <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-900 border border-slate-700/50 rounded-xl p-1 shadow-2xl gap-2 sm:gap-0">
+                        <div className="flex-1 flex items-center pl-2">
+                            <Search className="text-slate-500 w-5 h-5 shrink-0" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Ask...'Show me payment errors'"
+                                className="w-full bg-transparent border-none focus:ring-0 text-slate-200 placeholder-slate-500 h-10 px-3 text-sm"
+                            />
+                        </div>
                         <button
                             type="submit"
                             disabled={isSearching}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 whitespace-nowrap"
                         >
                             {isSearching ? 'Thinking...' : 'Ask AI'}
                         </button>
@@ -287,11 +289,12 @@ export default function Dashboard() {
 
                 {/* Clear Filters Button */}
                 {(filterSeverity !== 'all' || filterSource !== 'all' || filterTraceId) && (
-                    <div className="mt-3 flex items-center justify-center gap-2">
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-center">
                         <span className="text-xs text-slate-500">
-                            Active filters: {filterSeverity !== 'all' && <span className="text-indigo-400">severity={filterSeverity}</span>}
-                            {filterSource !== 'all' && <span className="text-indigo-400 ml-2">source={filterSource}</span>}
-                            {filterTraceId && <span className="text-indigo-400 ml-2">trace={filterTraceId.substring(0, 8)}...</span>}
+                            Active filters:
+                            {filterSeverity !== 'all' && <span className="text-indigo-400 ml-1">sev={filterSeverity}</span>}
+                            {filterSource !== 'all' && <span className="text-indigo-400 ml-1">src={filterSource}</span>}
+                            {filterTraceId && <span className="text-indigo-400 ml-1">trace={filterTraceId.substring(0, 4)}...</span>}
                         </span>
                         <button
                             onClick={() => {
@@ -302,7 +305,7 @@ export default function Dashboard() {
                             }}
                             className="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md transition-all border border-slate-700"
                         >
-                            Clear All Filters
+                            Clear All
                         </button>
                     </div>
                 )}
@@ -310,14 +313,14 @@ export default function Dashboard() {
 
             {/* Trace Waterfall View (Conditional) */}
             {traceLogs && (
-                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-semibold flex items-center gap-2 text-indigo-300">
-                            <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800">{filterTraceId}</span>
+                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 md:p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)] overflow-x-auto">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+                        <h3 className="text-lg font-semibold flex flex-wrap items-center gap-2 text-indigo-300">
+                            <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800 truncate max-w-[200px]">{filterTraceId}</span>
                         </h3>
                         <button onClick={() => setFilterTraceId('')} className="text-sm text-slate-400 hover:text-white">Close View</button>
                     </div>
-                    <div className="space-y-3 relative">
+                    <div className="space-y-3 relative min-w-[600px]">
                         <div className="absolute inset-0 flex justify-between px-32 pointer-events-none opacity-10">
                             <div className="border-l border-white h-full"></div>
                             <div className="border-l border-white h-full"></div>
@@ -326,7 +329,7 @@ export default function Dashboard() {
 
                         {traceLogs.map((step, i) => (
                             <div key={i} className="flex items-center group">
-                                <div className="w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
+                                <div className="w-24 md:w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
                                 <div className="flex-1 h-8 bg-slate-950/50 rounded flex items-center relative overflow-hidden">
                                     <div
                                         className={clsx(
@@ -342,7 +345,7 @@ export default function Dashboard() {
                                         <span className="absolute -right-12 top-0.5 text-[10px] text-slate-500 font-mono pl-2">{step.duration}ms</span>
                                     </div>
                                 </div>
-                                <div className="w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
+                                <div className="w-32 md:w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
                             </div>
                         ))}
                     </div>
@@ -424,32 +427,34 @@ export default function Dashboard() {
                             <select
                                 value={filterSource}
                                 onChange={(e) => setFilterSource(e.target.value)}
-                                className="bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
+                                className="w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
                             >
                                 <option value="all">All Services</option>
                                 {availableServices.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
 
-                            <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
-                                {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
-                                    const isActive = filterSeverity === sev;
-                                    return (
-                                        <button
-                                            key={sev}
-                                            onClick={() => setFilterSeverity(sev)}
-                                            className={clsx(
-                                                "px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all",
-                                                isActive && sev === 'error' && "bg-red-500/20 text-red-300 border border-red-500/20",
-                                                isActive && sev === 'warn' && "bg-amber-500/20 text-amber-300 border border-amber-500/20",
-                                                isActive && sev === 'info' && "bg-blue-500/20 text-blue-300 border border-blue-500/20",
-                                                isActive && sev === 'all' && "bg-slate-700 text-white",
-                                                !isActive && "text-slate-500 hover:text-slate-300"
-                                            )}
-                                        >
-                                            {sev}
-                                        </button>
-                                    );
-                                })}
+                            <div className="flex-1 overflow-x-auto">
+                                <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800 w-fit">
+                                    {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
+                                        const isActive = filterSeverity === sev;
+                                        return (
+                                            <button
+                                                key={sev}
+                                                onClick={() => setFilterSeverity(sev)}
+                                                className={clsx(
+                                                    "px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all whitespace-nowrap",
+                                                    isActive && sev === 'error' && "bg-red-500/20 text-red-300 border border-red-500/20",
+                                                    isActive && sev === 'warn' && "bg-amber-500/20 text-amber-300 border border-amber-500/20",
+                                                    isActive && sev === 'info' && "bg-blue-500/20 text-blue-300 border border-blue-500/20",
+                                                    isActive && sev === 'all' && "bg-slate-700 text-white",
+                                                    !isActive && "text-slate-500 hover:text-slate-300"
+                                                )}
+                                            >
+                                                {sev}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -458,37 +463,44 @@ export default function Dashboard() {
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10 shadow-lg border-b border-slate-800/60">
                                 <tr className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                                    <th className="p-4 w-24">Time</th>
+                                    <th className="p-4 w-24 hidden sm:table-cell">Time</th>
                                     <th className="p-4 w-24">Severity</th>
-                                    <th className="p-4 w-32">Service</th>
+                                    <th className="p-4 w-32 hidden md:table-cell">Service</th>
                                     <th className="p-4">Message</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm font-mono divide-y divide-slate-800/30">
                                 {filteredLogs.map((log, i) => (
                                     <tr key={log.id || i} className="hover:bg-slate-800/30 transition-colors group">
-                                        <td className="p-4 text-slate-500 whitespace-nowrap text-xs">
+                                        <td className="p-4 text-slate-500 whitespace-nowrap text-xs hidden sm:table-cell">
                                             {new Date(log.createdAt || Date.now()).toLocaleTimeString()}
                                         </td>
                                         <td className="p-4">
                                             <div className={clsx(
-                                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide shadow-sm w-fit",
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide shadow-sm w-fit whitespace-nowrap",
                                                 log.severity === 'error' && "bg-red-500/10 text-red-400 border-red-500/20",
                                                 log.severity === 'warn' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
                                                 (log.severity === 'info' || log.severity === 'debug') && "bg-blue-500/10 text-blue-400 border-blue-500/20",
                                             )}>
                                                 {log.severity}
                                             </div>
+                                            {/* Mobile-only timestamp */}
+                                            <div className="sm:hidden text-[10px] text-slate-600 mt-1">
+                                                {new Date(log.createdAt || Date.now()).toLocaleTimeString()}
+                                            </div>
                                         </td>
-                                        <td className="p-4">
-                                            <span className="text-slate-300 bg-slate-800/40 px-2 py-1 rounded border border-white/5 text-xs">{log.source}</span>
+                                        <td className="p-4 hidden md:table-cell">
+                                            <span className="text-slate-300 bg-slate-800/40 px-2 py-1 rounded border border-white/5 text-xs whitespace-nowrap">{log.source}</span>
                                         </td>
-                                        <td className="p-4 text-slate-400 group-hover:text-slate-200 transition-colors text-xs">
+                                        <td className="p-4 text-slate-400 group-hover:text-slate-200 transition-colors text-xs break-all sm:break-normal">
+                                            <div className="md:hidden mb-1">
+                                                <span className="text-slate-300 bg-slate-800/40 px-1.5 py-0.5 rounded border border-white/5 text-[10px]">{log.source}</span>
+                                            </div>
                                             {log.message}
                                             {log.metadata?.traceId && (
                                                 <button
                                                     onClick={() => setFilterTraceId(log.metadata.traceId || '')}
-                                                    className="ml-2 text-indigo-400 hover:text-indigo-300 hover:underline"
+                                                    className="inline-block ml-2 text-indigo-400 hover:text-indigo-300 hover:underline align-baseline"
                                                     title="View Trace"
                                                 >
                                                     [{log.metadata.traceId.substring(0, 6)}...]
