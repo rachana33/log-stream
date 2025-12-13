@@ -178,10 +178,8 @@ export default function Dashboard() {
         }
     };
 
-    const styles = useMemo(() => {
-        const uniqueSources = Array.from(new Set(logs.map(l => l.source)));
-        return uniqueSources;
-    }, [logs]);
+    // Constant services list for dropdown (doesn't change with logs)
+    const availableServices = ['auth-service', 'payment-gateway', 'user-profile', 'notification-service'];
 
     const filteredLogs = useMemo(() => {
         return logs.filter(l => {
@@ -429,7 +427,7 @@ export default function Dashboard() {
                                 className="bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
                             >
                                 <option value="all">All Services</option>
-                                {styles.map(s => <option key={s} value={s}>{s}</option>)}
+                                {availableServices.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
 
                             <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
@@ -528,7 +526,15 @@ export default function Dashboard() {
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                     <Tooltip
                                         cursor={{ fill: '#1e293b', opacity: 0.4 }}
-                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f1f5f9' }}
+                                        contentStyle={{
+                                            backgroundColor: '#1e293b',
+                                            borderColor: '#475569',
+                                            borderRadius: '8px',
+                                            color: '#f1f5f9',
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            fontWeight: '500'
+                                        }}
                                     />
                                     <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
                                         {chartData.map((entry, index) => (
@@ -551,7 +557,17 @@ export default function Dashboard() {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                     <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={2} />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: '#1e293b',
+                                            borderColor: '#475569',
+                                            borderRadius: '8px',
+                                            color: '#f1f5f9',
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            fontWeight: '500'
+                                        }}
+                                    />
                                     <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 2, fill: '#6366f1' }} name="Total Logs" />
                                     <Line type="monotone" dataKey="errors" stroke="#f87171" strokeWidth={2} dot={{ r: 2, fill: '#f87171' }} name="Errors" />
                                     <Line type="monotone" dataKey="warnings" stroke="#fbbf24" strokeWidth={2} dot={{ r: 2, fill: '#fbbf24' }} name="Warnings" />
