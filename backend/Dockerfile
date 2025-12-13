@@ -7,8 +7,9 @@ RUN npm ci
 
 COPY . .
 
-# Generate Prisma Client (using .env file for reliability during build)
-RUN echo "DATABASE_URL=postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public" > .env
+# Generate Prisma Client (using ARG/ENV to ensure visibility)
+ARG DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public"
+ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
 
 RUN npm run build
