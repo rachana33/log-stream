@@ -3,4 +3,7 @@ node_modules
 .env
 .env.bak
 
+# Build output
+dist/
+
 /generated/prisma
