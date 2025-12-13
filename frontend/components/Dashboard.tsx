@@ -236,10 +236,9 @@ export default function Dashboard() {
                 <div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-3 tracking-tight">
                         <Activity className="text-blue-400 w-8 h-8" /> LogStream
-                        <span className="text-sm font-mono text-slate-500 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-800/50">v2.0</span>
                     </h1>
                     <p className="text-slate-400 text-sm mt-2 ml-11 max-w-md leading-relaxed">
-                        Enterprise-grade distributed log analysis with AI-powered hazard detection.
+                        Log Analysis with AI Insights
                     </p>
                 </div>
 
