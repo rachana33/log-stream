@@ -1,10 +1,18 @@
 # LogStream
 
+![GitHub stars](https://img.shields.io/github/stars/rachana33/log-stream?style=social)
+![GitHub forks](https://img.shields.io/github/forks/rachana33/log-stream?style=social)
+![License](https://img.shields.io/github/license/rachana33/log-stream)
+![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
+
 A real-time distributed log analysis platform with AI-powered insights and anomaly detection.
 
 ## Overview
 
-LogStream is an enterprise-grade log aggregation and analysis system designed for modern microservices architectures. It provides real-time log streaming, intelligent filtering, distributed tracing visualization, and AI-driven hazard detection to help engineering teams quickly identify and resolve production issues.
+LogStream is an enterprise-grade log aggregation and analysis system designed for modern microservices architectures. It provides real-time log streaming, intelligent filtering, dist- Service dependency topology visualization
+- Log playback and time-travel debugging
+- **Azure Monitor Integration** (Coming Soon): Direct ingestion of Azure resource logs
+- **Mobile Responsive Dashboard** (Coming Soon): Optimized view for mobile devices hazard detection to help engineering teams quickly identify and resolve production issues.
 
 ## Key Features
 
@@ -37,23 +45,23 @@ LogStream is an enterprise-grade log aggregation and analysis system designed fo
 
 ### Intelligent Dashboard
 Interactive dashboard featuring real-time log streaming, AI-powered hazard detection, and service health monitoring.
-![Dashboard](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/dashboard%20with%20ai%20analysis.png)
+![LogStream Intelligent Dashboard showing real-time logs and AI analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/dashboard%20with%20ai%20analysis.png)
 
 ### Distributed Tracing
 Detailed waterfall visualization allows for deep-dive latency analysis across distributed microservices.
-![Trace Waterfall](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/trace%20waterfall.png)
+![Distributed Tracing Waterfall Chart visualizing microservice latency](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/trace%20waterfall.png)
 
 ### Volume & Trend Analysis
 Track log volume trends over time with granular severity breakdowns to instantly spot anomalies.
-![Trend Analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream,volume%20and%20trend%20analyzer.png)
+![Log Volume and Trend Analysis Chart showing error rates over time](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream,volume%20and%20trend%20analyzer.png)
 
 ### Smart Filtering
 Advanced filtering capabilities enable precise log isolation by service, severity, and trace ID.
-![Filtering](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream%20with%20filter.png)
+![Advanced Log Filtering Interface showing service and severity filters](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/logstream%20with%20filter.png)
 
 ### AI-Driven Insights
 Watch the system analyze logs to automatically detect root causes and generate summary reports.
-![AI Analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/ai%20thinking.gif)
+![AI-Driven Insights Animation demonstrating root cause analysis](https://raw.githubusercontent.com/rachana33/log-stream/media/.screenshots/ai%20thinking.gif)
 
 ## Architecture
 
