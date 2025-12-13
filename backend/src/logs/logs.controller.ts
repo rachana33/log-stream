@@ -12,8 +12,18 @@ export class LogsController {
     return this.logsService.create(createLogDto);
   }
 
-  @Get()
+  @Get('recent')
   findAll() {
+    return this.logsService.findAll();
+  }
+
+  @Get('severity-breakdown')
+  getSeverityStats() {
+    return this.logsService.getSeverityStats();
+  }
+
+  @Get()
+  index() {
     return this.logsService.findAll();
   }
 

@@ -62,6 +62,39 @@ export class AiService {
 
     });
 
-    return response.choices?.[0]?.message?.content?.trim() || '';
+    const completion = response.choices[0].message?.content;
+    try {
+      const parsed = JSON.parse(completion || '{}');
+      return parsed;
+    } catch (e) {
+      return { summary: completion, services: [] };
+    }
+  }
+
+  async parseQuery(query: string): Promise<any> {
+    const client = this.getClient();
+    const systemPrompt = `You are a search query parser. Extract specific log filters from natural language. Output strictly valid JSON.
+    Available keys: "severity" (enum: error, warn, info), "source" (string service name), "traceId" (string).
+    Example Input: "show me errors from payment-gateway"
+    Example Output: { "severity": "error", "source": "payment-gateway" }
+    Example Input: "find trace abc123"
+    Example Output: { "traceId": "abc123" }
+    `;
+
+    const response = await client.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: query }
+      ],
+      temperature: 0,
+    });
+
+    try {
+      const text = response.choices[0].message?.content?.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(text || '{}');
+    } catch (e) {
+      return {};
+    }
   }
 }

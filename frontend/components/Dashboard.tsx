@@ -13,11 +13,9 @@ import {
     ResponsiveContainer,
     CartesianGrid,
     Cell,
-    ReferenceLine
 } from 'recharts';
-import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Calendar, Search, ShieldAlert, CheckCircle, TrendingUp, Network } from 'lucide-react';
+import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Search, TrendingUp, Network } from 'lucide-react';
 import clsx from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
 
@@ -47,14 +45,13 @@ interface AiInsight {
 }
 
 const COLORS: Record<string, string> = {
-    error: '#f87171', // Red-400
-    warn: '#fbbf24',  // Amber-400
-    info: '#60a5fa',  // Blue-400
-    debug: '#34d399', // Emerald-400
+    error: '#f87171',
+    warn: '#fbbf24',
+    info: '#60a5fa',
+    debug: '#34d399',
 };
 
 export default function Dashboard() {
-    // Data States
     const [logs, setLogs] = useState<Log[]>([]);
     const [stats, setStats] = useState<SeverityStat[]>([]);
     const [aiData, setAiData] = useState<AiInsight | null>(null);
@@ -64,11 +61,9 @@ export default function Dashboard() {
     const [isSearching, setIsSearching] = useState(false);
     const [forecastData, setForecastData] = useState<{ time: string, count: number, isForecast: boolean }[]>([]);
 
-    // UI States
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [filterSource, setFilterSource] = useState<string>('all');
     const [filterTraceId, setFilterTraceId] = useState<string>('');
-    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     const fetchInitialData = async () => {
@@ -98,7 +93,7 @@ export default function Dashboard() {
                     .build();
 
                 connection.on('newLog', (log: Log) => {
-                    setLogs((prev) => [log, ...prev].slice(0, 500)); // Increased buffer
+                    setLogs((prev) => [log, ...prev].slice(0, 500));
                     setStats((prev) => {
                         const existing = prev.find(s => s.severity === log.severity);
                         if (existing) {
@@ -129,13 +124,11 @@ export default function Dashboard() {
             });
             const data = await res.json();
 
-            // Try parsing JSON if AI returned a stringified JSON block
             let parsed = data.insights;
             if (typeof data.insights === 'string') {
                 try {
                     parsed = JSON.parse(data.insights.replace(/```json/g, '').replace(/```/g, '').trim());
                 } catch (e) {
-                    // Fallback if not valid JSON
                     console.warn('AI response was not valid JSON', e);
                     parsed = null;
                 }
@@ -161,7 +154,6 @@ export default function Dashboard() {
         document.body.removeChild(link);
     };
 
-    // AI Natural Language Search
     const handleAiSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
@@ -178,7 +170,6 @@ export default function Dashboard() {
             if (filters.severity) setFilterSeverity(filters.severity);
             if (filters.source) setFilterSource(filters.source);
             if (filters.traceId) setFilterTraceId(filters.traceId);
-            // reset if empty
             if (Object.keys(filters).length === 0) alert('AI could not understand the query.');
         } catch (err) {
             console.error(err);
@@ -201,12 +192,10 @@ export default function Dashboard() {
         });
     }, [logs, filterSeverity, filterSource, filterTraceId]);
 
-    // Derived stats for charts
     const chartData = useMemo(() => {
         return stats.map(s => ({ ...s, fill: COLORS[s.severity] }));
     }, [stats]);
 
-    // Trace Waterfall Logic
     const traceLogs = useMemo(() => {
         if (!filterTraceId) return null;
         const related = logs.filter(l => l.metadata?.traceId === filterTraceId).sort((a, b) =>
@@ -218,31 +207,27 @@ export default function Dashboard() {
         return related.map(l => ({
             ...l,
             relativeStart: new Date(l.createdAt).getTime() - startTime,
-            duration: l.metadata?.latency || 10 // fallbacks
+            duration: l.metadata?.latency || 10
         }));
     }, [logs, filterTraceId]);
 
-    // Forecasting Logic (Simple simulation)
     useEffect(() => {
         if (stats.length === 0) return;
         const currentTotal = stats.reduce((acc, s) => acc + s.count, 0);
 
-        // Mock historical + forecast data
         const data = [];
         const now = Date.now();
         for (let i = 10; i > 0; i--) {
             data.push({ time: new Date(now - i * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), count: Math.max(0, currentTotal + (Math.random() * 20 - 10)), isForecast: false });
         }
-        // Current
         data.push({ time: 'Now', count: currentTotal, isForecast: false });
-        // Forecast
         let lastinfo = currentTotal;
         for (let i = 1; i <= 5; i++) {
-            lastinfo += (Math.random() * 30 - 10); // Random walk
+            lastinfo += (Math.random() * 30 - 10);
             data.push({ time: `+${i}m`, count: Math.max(0, Math.floor(lastinfo)), isForecast: true });
         }
         setForecastData(data);
-    }, [stats, logs]); // Recalculate when logs update
+    }, [stats, logs]);
 
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
@@ -297,7 +282,7 @@ export default function Dashboard() {
 
             {/* Trace Waterfall View (Conditional) */}
             {traceLogs && (
-                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)] animate-in fade-in slide-in-from-top-4">
+                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)]">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-semibold flex items-center gap-2 text-indigo-300">
                             <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800">{filterTraceId}</span>
@@ -305,7 +290,6 @@ export default function Dashboard() {
                         <button onClick={() => setFilterTraceId('')} className="text-sm text-slate-400 hover:text-white">Close View</button>
                     </div>
                     <div className="space-y-3 relative">
-                        {/* Time Grid Lines (Simplified) */}
                         <div className="absolute inset-0 flex justify-between px-32 pointer-events-none opacity-10">
                             <div className="border-l border-white h-full"></div>
                             <div className="border-l border-white h-full"></div>
@@ -322,7 +306,7 @@ export default function Dashboard() {
                                             step.severity === 'error' ? "bg-red-500/80" : "bg-indigo-500/60"
                                         )}
                                         style={{
-                                            marginLeft: `${Math.min(step.relativeStart / 10, 80)}%`, // Scale factor
+                                            marginLeft: `${Math.min(step.relativeStart / 10, 80)}%`,
                                             width: `${Math.max(step.duration / 5, 20)}px`,
                                             maxWidth: '100%'
                                         }}
@@ -337,225 +321,212 @@ export default function Dashboard() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8">
-
-                {/* 1. Bar Chart (Severity) */}
-                <div className="xl:col-span-1 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[400px]">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-indigo-400" /> Log Volume
-                    </h3>
-                    <div className="flex-1 w-full -ml-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} barSize={40}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="severity" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} tickFormatter={(val) => val.toUpperCase()} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                                <Tooltip
-                                    cursor={{ fill: '#1e293b', opacity: 0.4 }}
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f1f5f9' }}
-                                />
-                                <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
-                                    {chartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+            {/* AI Hazard Detection - Full Width */}
+            <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                        <Zap className="w-5 h-5 text-yellow-400" />
+                        <span>AI Hazard Detection</span>
                     </div>
+                    <button
+                        onClick={generateInsights}
+                        disabled={loadingInsights}
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all shadow-[0_0_20px_rgba(79,70,229,0.2)] flex items-center gap-2 disabled:opacity-50">
+                        {loadingInsights ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Run Analysis'}
+                    </button>
                 </div>
 
-                {/* 1.5 Forecast Chart (New) */}
-                <div className="xl:col-span-1 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[400px]">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-emerald-400" /> AI Traffic Forecast
-                    </h3>
-                    <div className="flex-1 w-full -ml-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={forecastData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={1} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
-                                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 3, fill: '#6366f1' }} />
-                                {/* Overlay dashed line if needed or custom rendering for forecast part */}
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* 2. Service Map / AI Insights */}
-                <div className="xl:col-span-2 flex flex-col gap-6">
-                    {/* Control Panel */}
-                    <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/60 rounded-xl p-4">
-                        <div className="flex items-center gap-2 text-slate-200 font-semibold">
-                            <Zap className="w-5 h-5 text-yellow-400" />
-                            <span>AI Hazard Detection</span>
-                        </div>
-                        <button
-                            onClick={generateInsights}
-                            disabled={loadingInsights}
-                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all shadow-[0_0_20px_rgba(79,70,229,0.2)] flex items-center gap-2 disabled:opacity-50">
-                            {loadingInsights ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Run Analysis'}
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                        {aiData?.services ? (
-                            aiData.services.map((svc, i) => (
-                                <div key={i} className={clsx(
-                                    "p-5 rounded-xl border flex flex-col gap-3 transition-all hover:scale-[1.02]",
-                                    svc.status === 'Critical' ? "bg-red-500/5 border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]" :
-                                        svc.status === 'Warning' ? "bg-amber-500/5 border-amber-500/20" :
-                                            "bg-emerald-500/5 border-emerald-500/20"
-                                )}>
-                                    <div className="flex justify-between items-start">
-                                        <h4 className="font-bold text-lg">{svc.name}</h4>
-                                        <span className={clsx(
-                                            "px-2 py-1 rounded text-xs font-bold uppercase",
-                                            svc.status === 'Critical' ? "bg-red-500/20 text-red-400" :
-                                                svc.status === 'Warning' ? "bg-amber-500/20 text-amber-400" :
-                                                    "bg-emerald-500/20 text-emerald-400"
-                                        )}>{svc.status}</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <ul className="list-disc list-inside space-y-1">
-                                            {svc.issues.map((iss, idx) => (
-                                                <li key={idx} className="text-xs text-slate-400 leading-relaxed">{iss}</li>
-                                            ))}
-                                            {svc.issues.length === 0 && <li className="text-xs text-slate-500 italic">No detected issues.</li>}
-                                        </ul>
-                                    </div>
-                                    <div className="mt-2 pt-3 border-t border-white/5 flex justify-between items-center">
-                                        <span className="text-xs text-slate-500 uppercase font-medium">Risk Score</span>
-                                        <div className="flex gap-1">
-                                            {[...Array(10)].map((_, n) => (
-                                                <div key={n} className={clsx("w-1 h-3 rounded-full", n < svc.riskScore ? (svc.status === 'Critical' ? "bg-red-500" : "bg-amber-500") : "bg-slate-800")} />
-                                            ))}
-                                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {aiData?.services ? (
+                        aiData.services.map((svc, i) => (
+                            <div key={i} className={clsx(
+                                "p-5 rounded-xl border flex flex-col gap-3 transition-all hover:scale-[1.02]",
+                                svc.status === 'Critical' ? "bg-red-500/5 border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]" :
+                                    svc.status === 'Warning' ? "bg-amber-500/5 border-amber-500/20" :
+                                        "bg-emerald-500/5 border-emerald-500/20"
+                            )}>
+                                <div className="flex justify-between items-start">
+                                    <h4 className="font-bold text-lg">{svc.name}</h4>
+                                    <span className={clsx(
+                                        "px-2 py-1 rounded text-xs font-bold uppercase",
+                                        svc.status === 'Critical' ? "bg-red-500/20 text-red-400" :
+                                            svc.status === 'Warning' ? "bg-amber-500/20 text-amber-400" :
+                                                "bg-emerald-500/20 text-emerald-400"
+                                    )}>{svc.status}</span>
+                                </div>
+                                <div className="flex-1">
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {svc.issues.map((iss, idx) => (
+                                            <li key={idx} className="text-xs text-slate-400 leading-relaxed">{iss}</li>
+                                        ))}
+                                        {svc.issues.length === 0 && <li className="text-xs text-slate-500 italic">No detected issues.</li>}
+                                    </ul>
+                                </div>
+                                <div className="mt-2 pt-3 border-t border-white/5 flex justify-between items-center">
+                                    <span className="text-xs text-slate-500 uppercase font-medium">Risk Score</span>
+                                    <div className="flex gap-1">
+                                        {[...Array(10)].map((_, n) => (
+                                            <div key={n} className={clsx("w-1 h-3 rounded-full", n < svc.riskScore ? (svc.status === 'Critical' ? "bg-red-500" : "bg-amber-500") : "bg-slate-800")} />
+                                        ))}
                                     </div>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="col-span-full h-48 bg-slate-900/20 border border-slate-800/50 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-3 border-dashed">
-                                <Search className="w-8 h-8 opacity-20" />
-                                <p className="text-sm">No analysis generated yet. Click "Run Analysis" to scan services.</p>
                             </div>
-                        )}
-                    </div>
+                        ))
+                    ) : (
+                        <div className="col-span-full h-48 bg-slate-900/20 border border-slate-800/50 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-3 border-dashed">
+                            <Search className="w-8 h-8 opacity-20" />
+                            <p className="text-sm">No analysis generated yet. Click "Run Analysis" to scan services.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* 3. Advanced Filtering & Feed */}
-            <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[800px]">
-                {/* Filter Toolbar */}
-                <div className="p-4 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur z-20 flex flex-col lg:flex-row gap-4 justify-between items-center">
-                    <div className="flex items-center gap-2 text-slate-200 font-semibold">
-                        <Terminal className="w-5 h-5 text-indigo-400" />
-                        <span>Log Stream</span>
-                        <span className="text-xs text-slate-500 font-normal bg-slate-800/50 px-2 py-0.5 rounded ml-2">{filteredLogs.length} events</span>
+            {/* Bottom Section: Log Stream + Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left: Log Stream */}
+                <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[700px]">
+                    <div className="p-4 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur z-20 flex flex-col gap-4">
+                        <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                            <Terminal className="w-5 h-5 text-indigo-400" />
+                            <span>Log Stream</span>
+                            <span className="text-xs text-slate-500 font-normal bg-slate-800/50 px-2 py-0.5 rounded ml-2">{filteredLogs.length} events</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            <select
+                                value={filterSource}
+                                onChange={(e) => setFilterSource(e.target.value)}
+                                className="bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
+                            >
+                                <option value="all">All Services</option>
+                                {styles.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+
+                            <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
+                                {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
+                                    const isActive = filterSeverity === sev;
+                                    return (
+                                        <button
+                                            key={sev}
+                                            onClick={() => setFilterSeverity(sev)}
+                                            className={clsx(
+                                                "px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all",
+                                                isActive && sev === 'error' && "bg-red-500/20 text-red-300 border border-red-500/20",
+                                                isActive && sev === 'warn' && "bg-amber-500/20 text-amber-300 border border-amber-500/20",
+                                                isActive && sev === 'info' && "bg-blue-500/20 text-blue-300 border border-blue-500/20",
+                                                isActive && sev === 'all' && "bg-slate-700 text-white",
+                                                !isActive && "text-slate-500 hover:text-slate-300"
+                                            )}
+                                        >
+                                            {sev}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                        <div className="relative group">
-                            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500 group-focus-within:text-slate-300 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Filter Trace ID..."
-                                value={filterTraceId}
-                                onChange={(e) => setFilterTraceId(e.target.value)}
-                                className="pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 w-full lg:w-48 placeholder:text-slate-600"
-                            />
-                        </div>
-
-                        <select
-                            value={filterSource}
-                            onChange={(e) => setFilterSource(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-lg text-sm px-3 py-2 focus:outline-none focus:border-indigo-500/50"
-                        >
-                            <option value="all">All Services</option>
-                            {styles.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-
-                        <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
-                            {(['all', 'error', 'warn', 'info'] as const).map((sev) => {
-                                const isActive = filterSeverity === sev;
-                                return (
-                                    <button
-                                        key={sev}
-                                        onClick={() => setFilterSeverity(sev)}
-                                        className={clsx(
-                                            "px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all",
-                                            isActive && sev === 'error' && "bg-red-500/20 text-red-300 border border-red-500/20",
-                                            isActive && sev === 'warn' && "bg-amber-500/20 text-amber-300 border border-amber-500/20",
-                                            isActive && sev === 'info' && "bg-blue-500/20 text-blue-300 border border-blue-500/20",
-                                            isActive && sev === 'all' && "bg-slate-700 text-white",
-                                            !isActive && "text-slate-500 hover:text-slate-300"
-                                        )}
-                                    >
-                                        {sev}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/20">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10 shadow-lg border-b border-slate-800/60">
+                                <tr className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                                    <th className="p-4 w-24">Time</th>
+                                    <th className="p-4 w-24">Severity</th>
+                                    <th className="p-4 w-32">Service</th>
+                                    <th className="p-4">Message</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm font-mono divide-y divide-slate-800/30">
+                                {filteredLogs.map((log, i) => (
+                                    <tr key={log.id || i} className="hover:bg-slate-800/30 transition-colors group">
+                                        <td className="p-4 text-slate-500 whitespace-nowrap text-xs">
+                                            {new Date(log.createdAt || Date.now()).toLocaleTimeString()}
+                                        </td>
+                                        <td className="p-4">
+                                            <div className={clsx(
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide shadow-sm w-fit",
+                                                log.severity === 'error' && "bg-red-500/10 text-red-400 border-red-500/20",
+                                                log.severity === 'warn' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                                                (log.severity === 'info' || log.severity === 'debug') && "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                                            )}>
+                                                {log.severity}
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className="text-slate-300 bg-slate-800/40 px-2 py-1 rounded border border-white/5 text-xs">{log.source}</span>
+                                        </td>
+                                        <td className="p-4 text-slate-400 group-hover:text-slate-200 transition-colors text-xs">
+                                            {log.message}
+                                            {log.metadata?.traceId && (
+                                                <button
+                                                    onClick={() => setFilterTraceId(log.metadata.traceId)}
+                                                    className="ml-2 text-indigo-400 hover:text-indigo-300 hover:underline"
+                                                    title="View Trace"
+                                                >
+                                                    [{log.metadata.traceId.substring(0, 6)}...]
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredLogs.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="p-24 text-center text-slate-600 flex flex-col items-center justify-center">
+                                            <Filter className="w-10 h-10 mb-3 opacity-20" />
+                                            <p>No logs match the current filters.</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                        <div ref={logsEndRef} />
                     </div>
                 </div>
 
-                {/* Log Table */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/20">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10 shadow-lg border-b border-slate-800/60">
-                            <tr className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                                <th className="p-4 w-32">Timestamp</th>
-                                <th className="p-4 w-28">Severity</th>
-                                <th className="p-4 w-48">Service</th>
-                                <th className="p-4 w-40">Trace ID</th>
-                                <th className="p-4">Message</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm font-mono divide-y divide-slate-800/30">
-                            {filteredLogs.map((log, i) => (
-                                <tr key={log.id || i} className="hover:bg-slate-800/30 transition-colors group">
-                                    <td className="p-4 text-slate-500 whitespace-nowrap text-xs">
-                                        {new Date(log.createdAt || Date.now()).toLocaleTimeString()}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className={clsx(
-                                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide shadow-sm w-fit",
-                                            log.severity === 'error' && "bg-red-500/10 text-red-400 border-red-500/20",
-                                            log.severity === 'warn' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                                            (log.severity === 'info' || log.severity === 'debug') && "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                                        )}>
-                                            {log.severity}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-slate-300 bg-slate-800/40 px-2 py-1 rounded border border-white/5">{log.source}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <button
-                                            onClick={() => setFilterTraceId(log.metadata?.traceId || '')}
-                                            className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer font-mono"
-                                            title="Filter by Trace ID"
-                                        >
-                                            {log.metadata?.traceId ? log.metadata.traceId.substring(0, 8) + '...' : '-'}
-                                        </button>
-                                    </td>
-                                    <td className="p-4 text-slate-400 group-hover:text-slate-200 transition-colors">
-                                        {log.message}
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredLogs.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="p-24 text-center text-slate-600 flex flex-col items-center justify-center">
-                                        <Filter className="w-10 h-10 mb-3 opacity-20" />
-                                        <p>No logs match the current filters.</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                    <div ref={logsEndRef} />
+                {/* Right: Charts */}
+                <div className="flex flex-col gap-6">
+                    {/* Bar Chart */}
+                    <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[335px]">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-indigo-400" /> Log Volume
+                        </h3>
+                        <div className="flex-1 w-full -ml-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} barSize={40}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                    <XAxis dataKey="severity" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} tickFormatter={(val) => val.toUpperCase()} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                    <Tooltip
+                                        cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f1f5f9' }}
+                                    />
+                                    <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Forecast Chart */}
+                    <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl flex flex-col h-[335px]">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-emerald-400" /> AI Traffic Forecast
+                        </h3>
+                        <div className="flex-1 w-full -ml-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={forecastData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} interval={1} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                                    <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ r: 3, fill: '#6366f1' }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 </div>
             </div>
 
