@@ -278,6 +278,28 @@ export default function Dashboard() {
                         </button>
                     </div>
                 </form>
+
+                {/* Clear Filters Button */}
+                {(filterSeverity !== 'all' || filterSource !== 'all' || filterTraceId) && (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                        <span className="text-xs text-slate-500">
+                            Active filters: {filterSeverity !== 'all' && <span className="text-indigo-400">severity={filterSeverity}</span>}
+                            {filterSource !== 'all' && <span className="text-indigo-400 ml-2">source={filterSource}</span>}
+                            {filterTraceId && <span className="text-indigo-400 ml-2">trace={filterTraceId.substring(0, 8)}...</span>}
+                        </span>
+                        <button
+                            onClick={() => {
+                                setFilterSeverity('all');
+                                setFilterSource('all');
+                                setFilterTraceId('');
+                                setSearchQuery('');
+                            }}
+                            className="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md transition-all border border-slate-700"
+                        >
+                            Clear All Filters
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Trace Waterfall View (Conditional) */}
@@ -459,7 +481,7 @@ export default function Dashboard() {
                                             {log.message}
                                             {log.metadata?.traceId && (
                                                 <button
-                                                    onClick={() => setFilterTraceId(log.metadata.traceId)}
+                                                    onClick={() => setFilterTraceId(log.metadata.traceId || '')}
                                                     className="ml-2 text-indigo-400 hover:text-indigo-300 hover:underline"
                                                     title="View Trace"
                                                 >
