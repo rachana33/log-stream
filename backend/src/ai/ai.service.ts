@@ -73,12 +73,31 @@ export class AiService {
 
   async parseQuery(query: string): Promise<any> {
     const client = this.getClient();
-    const systemPrompt = `You are a search query parser. Extract specific log filters from natural language. Output strictly valid JSON.
-    Available keys: "severity" (enum: error, warn, info), "source" (string service name), "traceId" (string).
-    Example Input: "show me errors from payment-gateway"
-    Example Output: { "severity": "error", "source": "payment-gateway" }
-    Example Input: "find trace abc123"
-    Example Output: { "traceId": "abc123" }
+    const systemPrompt = `You are a search query parser for a log analysis system. Extract specific log filters from natural language. Output strictly valid JSON.
+    
+    Available keys: 
+    - "severity" (enum: error, warn, info)
+    - "source" (exact service name from: auth-service, payment-gateway, user-profile, notification-service)
+    - "traceId" (string)
+    
+    IMPORTANT SERVICE NAME RULES:
+    - "payment" or "payment service" → use "payment-gateway"
+    - "auth" or "authentication" → use "auth-service"
+    - "user" or "profile" → use "user-profile"
+    - "notification" or "notifications" → use "notification-service"
+    
+    Examples:
+    Input: "show me errors from payment-gateway"
+    Output: { "severity": "error", "source": "payment-gateway" }
+    
+    Input: "show me payment errors"
+    Output: { "severity": "error", "source": "payment-gateway" }
+    
+    Input: "find warnings from auth"
+    Output: { "severity": "warn", "source": "auth-service" }
+    
+    Input: "find trace abc123"
+    Output: { "traceId": "abc123" }
     `;
 
     const response = await client.chat.completions.create({
