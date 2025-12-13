@@ -87,7 +87,6 @@ export class AiService {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: query }
       ],
-      temperature: 0,
     });
 
     try {
