@@ -17,7 +17,8 @@ import {
 import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Search, TrendingUp, Network } from 'lucide-react';
 import clsx from 'clsx';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://logstream-backend.orangeplant-6cef9541.eastus.azurecontainerapps.io';
+console.log('Using Backend URL:', API_URL); // Debugging
 
 interface Log {
     id: number;
