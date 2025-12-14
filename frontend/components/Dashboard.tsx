@@ -185,7 +185,7 @@ export default function Dashboard() {
         setIsSearching(false); // Release button lock immediately
 
         // 2. Kick off Chat Search (Slower) - if it looks like a question or analytical query
-        const needsChatModel = searchQuery.toLowerCase().match(/\b(who|which|what|show|find|count|many|how|lowest|highest|most|least|best|worst)\b/) || searchQuery.includes('?');
+        const needsChatModel = searchQuery.toLowerCase().match(/\b(who|which|what|where|when|why|how|show|find|count|many|lowest|highest|most|least|best|worst|compare|analyze|summarize|summary|explain|describe|tell|list|total|average|sum|percentage|rate|recent|latest|first|last|recommend|suggest|should|trend|pattern|spike|anomaly|between|difference)\b/) || searchQuery.includes('?');
         if (needsChatModel) {
             setIsThinking(true);
             try {
