@@ -131,9 +131,12 @@ export class AiService {
     ${logSummary}
     
     Rules:
-    - Be concise and direct.
-    - If asked "which service has maximum errors", count them in the provided logs and answer.
-    - If the answer isn't in the logs, say "I don't see that in the recent logs."
+    - Keep responses under 4-5 lines maximum. Be extremely concise.
+    - Use bullet points or comma-separated lists for brevity.
+    - Focus on key findings only (e.g., "6 errors: payment-gateway (3), auth-service (2), user-profile (1). payment-gateway is the primary issue.")
+    - If asked about counts, aggregations, or comparisons, provide quick numeric answers.
+    - Skip verbose explanations. Get straight to the point.
+    - If the answer isn't in the logs, say "Not found in recent logs."
     `;
 
     const response = await client.chat.completions.create({
