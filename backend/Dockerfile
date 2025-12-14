@@ -12,7 +12,7 @@ ARG DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema
 ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
 
-RUN npm run build
+RUN npm run build && ls -la dist/src/ && test -f dist/src/main.js
 
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]
