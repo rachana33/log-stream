@@ -368,46 +368,6 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Trace Waterfall View (Conditional) */}
-            {traceLogs && (
-                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 md:p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)] overflow-x-auto">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
-                        <h3 className="text-lg font-semibold flex flex-wrap items-center gap-2 text-indigo-300">
-                            <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800 truncate max-w-[200px]">{filterTraceId}</span>
-                        </h3>
-                        <button onClick={() => setFilterTraceId('')} className="text-sm text-slate-400 hover:text-white">Close View</button>
-                    </div>
-                    <div className="space-y-3 relative min-w-[600px]">
-                        <div className="absolute inset-0 flex justify-between px-32 pointer-events-none opacity-10">
-                            <div className="border-l border-white h-full"></div>
-                            <div className="border-l border-white h-full"></div>
-                            <div className="border-l border-white h-full"></div>
-                        </div>
-
-                        {traceLogs.map((step, i) => (
-                            <div key={i} className="flex items-center group">
-                                <div className="w-24 md:w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
-                                <div className="flex-1 h-8 bg-slate-950/50 rounded flex items-center relative overflow-hidden">
-                                    <div
-                                        className={clsx(
-                                            "h-5 rounded-md relative shadow-lg transition-all duration-500 group-hover:brightness-110",
-                                            step.severity === 'error' ? "bg-red-500/80" : "bg-indigo-500/60"
-                                        )}
-                                        style={{
-                                            marginLeft: `${Math.min(step.relativeStart / 10, 80)}%`,
-                                            width: `${Math.max(step.duration / 5, 20)}px`,
-                                            maxWidth: '100%'
-                                        }}
-                                    >
-                                        <span className="absolute -right-12 top-0.5 text-[10px] text-slate-500 font-mono pl-2">{step.duration}ms</span>
-                                    </div>
-                                </div>
-                                <div className="w-32 md:w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* AI Hazard Detection - Full Width */}
             <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 shadow-2xl">
@@ -468,6 +428,47 @@ export default function Dashboard() {
                     )}
                 </div>
             </div>
+
+            {/* Trace Waterfall View (Conditional) */}
+            {traceLogs && (
+                <div className="mb-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 md:p-6 shadow-[0_0_50px_rgba(79,70,229,0.1)] overflow-x-auto">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+                        <h3 className="text-lg font-semibold flex flex-wrap items-center gap-2 text-indigo-300">
+                            <Network className="w-5 h-5" /> Trace Waterfall <span className="text-slate-500 font-mono text-xs px-2 py-1 bg-slate-950 rounded border border-slate-800 truncate max-w-[200px]">{filterTraceId}</span>
+                        </h3>
+                        <button onClick={() => setFilterTraceId('')} className="text-sm text-slate-400 hover:text-white">Close View</button>
+                    </div>
+                    <div className="space-y-3 relative min-w-[600px]">
+                        <div className="absolute inset-0 flex justify-between px-32 pointer-events-none opacity-10">
+                            <div className="border-l border-white h-full"></div>
+                            <div className="border-l border-white h-full"></div>
+                            <div className="border-l border-white h-full"></div>
+                        </div>
+
+                        {traceLogs.map((step, i) => (
+                            <div key={i} className="flex items-center group">
+                                <div className="w-24 md:w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
+                                <div className="flex-1 h-8 bg-slate-950/50 rounded flex items-center relative overflow-hidden">
+                                    <div
+                                        className={clsx(
+                                            "h-5 rounded-md relative shadow-lg transition-all duration-500 group-hover:brightness-110",
+                                            step.severity === 'error' ? "bg-red-500/80" : "bg-indigo-500/60"
+                                        )}
+                                        style={{
+                                            marginLeft: `${Math.min(step.relativeStart / 10, 80)}%`,
+                                            width: `${Math.max(step.duration / 5, 20)}px`,
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        <span className="absolute -right-12 top-0.5 text-[10px] text-slate-500 font-mono pl-2">{step.duration}ms</span>
+                                    </div>
+                                </div>
+                                <div className="w-32 md:w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Section: Log Stream + Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
