@@ -184,8 +184,9 @@ export default function Dashboard() {
         }
         setIsSearching(false); // Release button lock immediately
 
-        // 2. Kick off Chat Search (Slower) - if it looks like a question or generic query
-        if (searchQuery.includes('who') || searchQuery.includes('which') || searchQuery.includes('what') || searchQuery.includes('?') || searchQuery.includes('count') || searchQuery.includes('many')) {
+        // 2. Kick off Chat Search (Slower) - if it looks like a question or analytical query
+        const needsChatModel = searchQuery.toLowerCase().match(/\b(who|which|what|show|find|count|many|how|lowest|highest|most|least|best|worst)\b/) || searchQuery.includes('?');
+        if (needsChatModel) {
             setIsThinking(true);
             try {
                 const chatRes = await fetch(`${API_URL}/ai/chat`, {
