@@ -446,8 +446,8 @@ export default function Dashboard() {
                         </div>
 
                         {traceLogs.map((step, i) => (
-                            <div key={i} className="flex items-center group">
-                                <div className="w-24 md:w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0">{step.source}</div>
+                            <div key={i} className="flex items-center group relative z-10">
+                                <div className="w-24 md:w-32 text-xs text-right pr-4 text-slate-400 font-medium truncate shrink-0 bg-[#0B1120] relative z-10">{step.source}</div>
                                 <div className="flex-1 h-8 bg-slate-950/50 rounded flex items-center relative overflow-hidden">
                                     <div
                                         className={clsx(
@@ -463,7 +463,7 @@ export default function Dashboard() {
                                         <span className="absolute -right-12 top-0.5 text-[10px] text-slate-500 font-mono pl-2">{step.duration}ms</span>
                                     </div>
                                 </div>
-                                <div className="w-32 md:w-48 text-xs pl-4 text-slate-500 truncate shrink-0">{step.message}</div>
+                                <div className="w-32 md:w-48 text-xs pl-4 text-slate-500 truncate shrink-0 bg-[#0B1120] relative z-10">{step.message}</div>
                             </div>
                         ))}
                     </div>
