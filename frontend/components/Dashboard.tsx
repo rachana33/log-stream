@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { HubConnectionBuilder } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@microsoft/signalr';
 import {
     BarChart,
     Bar,
@@ -16,6 +16,8 @@ import {
 } from 'recharts';
 import { Activity, Terminal, Zap, RefreshCw, Filter, AlertTriangle, Info, Download, Search, TrendingUp, Network } from 'lucide-react';
 import clsx from 'clsx';
+import { getMockLogs, getMockStats, getMockForecast } from '@/lib/mockData';
+import LoadingSkeleton from './LoadingSkeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://logstream-backend.orangeplant-6cef9541.eastus.azurecontainerapps.io';
 console.log('Using Backend URL:', API_URL); // Debugging
@@ -53,6 +55,10 @@ const COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
+    // Show skeleton initially
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+    // Initialize with mock data for instant display
     const [logs, setLogs] = useState<Log[]>([]);
     const [stats, setStats] = useState<SeverityStat[]>([]);
     const [aiData, setAiData] = useState<AiInsight | null>(null);
@@ -63,57 +69,144 @@ export default function Dashboard() {
     const [aiAnswer, setAiAnswer] = useState<string | null>(null);
     const [isThinking, setIsThinking] = useState(false);
     const [forecastData, setForecastData] = useState<{ time: string, count: number, errors: number, warnings: number }[]>([]);
+    const [usingMockData, setUsingMockData] = useState(true);
 
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [filterSource, setFilterSource] = useState<string>('all');
     const [filterTraceId, setFilterTraceId] = useState<string>('');
     const logsEndRef = useRef<HTMLDivElement>(null);
+    const connectionRef = useRef<HubConnection | null>(null);
+    const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load mock data immediately for instant display
+    useEffect(() => {
+        // Load mock data synchronously
+        setLogs(getMockLogs());
+        setStats(getMockStats());
+        setForecastData(getMockForecast());
+
+        // Show skeleton for just 500ms for smooth transition
+        const timer = setTimeout(() => {
+            setIsInitialLoading(false);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const fetchInitialData = async () => {
         try {
-            const logsRes = await fetch(`${API_URL}/logs/recent`);
-            const statsRes = await fetch(`${API_URL}/logs/severity-breakdown`);
+            const [logsRes, statsRes] = await Promise.all([
+                fetch(`${API_URL}/logs/recent`, { signal: AbortSignal.timeout(5000) }),
+                fetch(`${API_URL}/logs/severity-breakdown`, { signal: AbortSignal.timeout(5000) })
+            ]);
 
-            if (logsRes.ok) setLogs(await logsRes.json());
-            if (statsRes.ok) setStats(await statsRes.json());
+            if (logsRes.ok && statsRes.ok) {
+                const [logsData, statsData] = await Promise.all([
+                    logsRes.json(),
+                    statsRes.json()
+                ]);
+
+                if (logsData.length > 0) {
+                    setLogs(logsData);
+                    setStats(statsData);
+                    setUsingMockData(false);
+                    console.log('✅ Real data loaded from backend');
+                }
+            }
         } catch (err) {
-            console.error('Failed to fetch initial data', err);
+            console.warn('Backend unavailable, using mock data:', err);
+            // Keep using mock data
+        }
+    };
+
+    const connectSignalR = async () => {
+        try {
+            const negRes = await fetch(`${API_URL}/realtime/negotiate`, {
+                method: 'POST',
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!negRes.ok) {
+                console.warn('SignalR negotiation failed');
+                return;
+            }
+
+            const { url, accessToken } = await negRes.json();
+
+            const connection = new HubConnectionBuilder()
+                .withUrl(url, { accessTokenFactory: () => accessToken })
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: () => {
+                        // Retry every 5-10 seconds
+                        return 5000 + Math.random() * 5000;
+                    }
+                })
+                .build();
+
+            connection.on('newLog', (log: Log) => {
+                setLogs((prev) => [log, ...prev].slice(0, 500));
+                setStats((prev) => {
+                    const existing = prev.find(s => s.severity === log.severity);
+                    if (existing) {
+                        return prev.map(s => s.severity === log.severity ? { ...s, count: s.count + 1 } : s);
+                    }
+                    return [...prev, { severity: log.severity, count: 1 }];
+                });
+                setUsingMockData(false);
+            });
+
+            connection.onreconnecting(() => {
+                console.log('🔄 SignalR reconnecting...');
+                setConnected(false);
+            });
+
+            connection.onreconnected(() => {
+                console.log('✅ SignalR reconnected');
+                setConnected(true);
+            });
+
+            connection.onclose(() => {
+                console.log('❌ SignalR connection closed');
+                setConnected(false);
+                // Attempt to reconnect after 10 seconds
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    console.log('🔄 Attempting to reconnect SignalR...');
+                    connectSignalR();
+                }, 10000);
+            });
+
+            await connection.start();
+            setConnected(true);
+            setUsingMockData(false);
+            connectionRef.current = connection;
+            console.log('✅ SignalR connected successfully');
+        } catch (err) {
+            console.warn('SignalR Connection Failed:', err);
+            setConnected(false);
+            // Retry connection after 15 seconds
+            reconnectTimeoutRef.current = setTimeout(() => {
+                console.log('🔄 Retrying SignalR connection...');
+                connectSignalR();
+            }, 15000);
         }
     };
 
     useEffect(() => {
+        // Fetch real data in the background
         fetchInitialData();
 
-        const connectSignalR = async () => {
-            try {
-                const negRes = await fetch(`${API_URL}/realtime/negotiate`, { method: 'POST' });
-                if (!negRes.ok) return;
-                const { url, accessToken } = await negRes.json();
+        // Connect to SignalR
+        connectSignalR();
 
-                const connection = new HubConnectionBuilder()
-                    .withUrl(url, { accessTokenFactory: () => accessToken })
-                    .withAutomaticReconnect()
-                    .build();
-
-                connection.on('newLog', (log: Log) => {
-                    setLogs((prev) => [log, ...prev].slice(0, 500));
-                    setStats((prev) => {
-                        const existing = prev.find(s => s.severity === log.severity);
-                        if (existing) {
-                            return prev.map(s => s.severity === log.severity ? { ...s, count: s.count + 1 } : s);
-                        }
-                        return [...prev, { severity: log.severity, count: 1 }];
-                    });
-                });
-
-                await connection.start();
-                setConnected(true);
-            } catch (err) {
-                console.error('SignalR Connection Failed', err);
+        return () => {
+            // Cleanup on unmount
+            if (connectionRef.current && connectionRef.current.state === HubConnectionState.Connected) {
+                connectionRef.current.stop();
+            }
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
             }
         };
-
-        connectSignalR();
     }, []);
 
     const generateInsights = async () => {
@@ -267,6 +360,11 @@ export default function Dashboard() {
         setForecastData(timeWindows);
     }, [logs]);
 
+    // Show loading skeleton during initial load
+    if (isInitialLoading) {
+        return <LoadingSkeleton />;
+    }
+
     return (
         <div className="min-h-screen bg-[#0B1120] text-slate-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
             {/* Header */}
@@ -284,6 +382,14 @@ export default function Dashboard() {
                     <button onClick={downloadLogs} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-400 rounded-lg text-sm transition-all border border-slate-700/50">
                         <Download className="w-4 h-4" /> Export Logs
                     </button>
+                    {usingMockData && (
+                        <div className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/30 backdrop-blur-sm">
+                            <Info className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="text-xs font-medium text-amber-300">
+                                DEMO MODE
+                            </span>
+                        </div>
+                    )}
                     <div className="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-800/80 backdrop-blur-sm">
                         <div className={clsx("w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-colors duration-500", connected ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-500 shadow-rose-500/50")} />
                         <span className="text-xs font-semibold tracking-wide text-slate-300">

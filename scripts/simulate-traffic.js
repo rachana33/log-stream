@@ -1,4 +1,4 @@
-const ENDPOINT = 'http://localhost:3000/logs/ingest';
+const ENDPOINT = process.env.BACKEND_URL || 'https://logstream-backend.orangeplant-6cef9541.eastus.azurecontainerapps.io' + '/logs/ingest';
 const SERVICES = ['auth-service', 'payment-gateway', 'user-profile', 'notification-service'];
 const SEVERITIES = ['info', 'info', 'info', 'warn', 'error']; // Weighted
 const MESSAGES = {
@@ -41,7 +41,7 @@ async function sendTrace() {
 }
 
 function sendToBackend(log) {
-    const api = 'http://localhost:3000/logs/ingest';
+    const api = ENDPOINT;
     // Using simple fetch (Node 18+)
     fetch(api, {
         method: 'POST',
